@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Consulta MTC - Asistente IA</title>
+    <style>
+        /* DISEÑO ESTILO APPLE / IPAD */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f2f2f7; /* Gris claro Apple */
+            color: #1c1c1e;
+            margin: 0;
+            padding: 20px;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container {
+            max-width: 700px;
+            margin: 0 auto;
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 20px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+
+        h1 {
+            text-align: center;
+            font-weight: 700;
+            color: #1d1d1f;
+            margin-bottom: 5px;
+        }
+        
+        p.subtitle {
+            text-align: center;
+            color: #86868b;
+            margin-bottom: 30px;
+            font-size: 0.9em;
+        }
+
+        /* ESTILOS DEL FORMULARIO */
+        .form-section {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+            color: #3a3a3c;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        input, textarea {
+            width: 100%;
+            padding: 14px;
+            border: 1px solid #d1d1d6;
+            border-radius: 12px;
+            font-size: 17px; /* Tamaño ideal para evitar zoom en iPad */
+            background: #fcfcfc;
+            box-sizing: border-box;
+            font-family: inherit;
+        }
+
+        textarea {
+            height: 120px;
+            resize: none;
+        }
+
+        input:focus, textarea:focus {
+            border-color: #007aff;
+            outline: none;
+            background: #fff;
+        }
+
+        /* BOTONES */
+        .btn-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 30px;
+        }
+
+        button {
+            flex: 1;
+            padding: 16px;
+            border: none;
+            border-radius: 14px;
+            font-size: 17px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-generate {
+            background-color: #007aff; /* Azul Apple */
+            color: white;
+        }
+        .btn-generate:active { transform: scale(0.98); background-color: #0062cc; }
+
+        .btn-clear {
+            background-color: #e5e5ea;
+            color: #ff3b30; /* Rojo para borrar */
+            flex: 0.4; /* Botón más pequeño */
+        }
+
+        /* RESULTADO IA */
+        #ai-section {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f0f8ff;
+            border-radius: 16px;
+            display: none; /* Oculto al principio */
+            border: 1px solid #cce4ff;
+        }
+
+        .prompt-box {
+            width: 100%;
+            height: 150px;
+            padding: 10px;
+            background: #fff;
+            border: 1px solid #cce4ff;
+            border-radius: 10px;
+            font-family: "Menlo", monospace;
+            font-size: 14px;
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .btn-copy {
+            width: 100%;
+            background-color: #34c759; /* Verde éxito */
+            color: white;
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Consulta MTC</h1>
+    <p class="subtitle">Generador de Prompt Clínico</p>
+    
+    <form id="consultaForm">
+        <div class="form-section">
+            <label>Nombre Paciente</label>
+            <input type="text" id="nombre" placeholder="Referencia interna">
+        </div>
+        
+        <div class="form-section">
+            <label>Teléfono</label>
+            <input type="tel" id="telefono" placeholder="Número de contacto">
+        </div>
+
+        <hr style="border: 0; border-top: 1px solid #e5e5ea; margin: 25px 0;">
+
+        <div class="form-section">
+            <label>Motivo de Consulta / Síntomas</label>
+            <textarea id="motivo" placeholder="Describe el cuadro clínico detallado..."></textarea>
+        </div>
+
+        <div class="form-section">
+            <label>Pulso</label>
+            <input type="text" id="pulso" placeholder="Ej: Cuerda, rápido, resbaladizo...">
+        </div>
+
+        <div class="form-section">
+            <label>Lengua</label>
+            <input type="text" id="lengua" placeholder="Ej: Roja, sin capa, marcas dentales...">
+        </div>
+
+        <div class="btn-group">
+            <button type="button" class="btn-clear" onclick="limpiarFormulario()">Borrar</button>
+            <button type="button" class="btn-generate" onclick="generarPrompt()">Crear Consulta IA</button>
+        </div>
+    </form>
+
+    <div id="ai-section">
+        <label style="color: #007aff;">Listo para copiar a Gemini:</label>
+        <p style="font-size: 0.85em; color: #666; margin-top:0;">Los datos personales han sido eliminados por privacidad.</p>
+        
+        <textarea id="prompt-output" class="prompt-box" readonly></textarea>
+        
+        <button class="btn-copy" onclick="copiarTexto()">Copiar Texto</button>
+        <p id="copy-msg" style="text-align: center; color: #34c759; display: none; margin-top: 10px; font-weight: bold;">¡Copiado! Abre Gemini</p>
+    </div>
+</div>
+
+<script>
+    function generarPrompt() {
+        // 1. Recoger datos médicos
+        const motivo = document.getElementById('motivo').value;
+        const pulso = document.getElementById('pulso').value;
+        const lengua = document.getElementById('lengua').value;
+
+        // Validación simple
+        if (!motivo) {
+            alert("Por favor, escribe al menos el motivo de consulta.");
+            return;
+        }
+
+        // 2. Construir el Prompt (SIN nombre ni teléfono)
+        const prompt = `Actúa como un experto senior en Medicina Tradicional China (MTC) y Acupuntura.
+        
+Analiza el siguiente caso clínico (anonimizado):
+
+- SÍNTOMAS Y MOTIVO DE CONSULTA: 
+${motivo}
+
+- PULSO: 
+${pulso}
+
+- LENGUA: 
+${lengua}
+
+Por favor, proporciona un informe clínico detallado que incluya:
+1. DIAGNÓSTICO SINDROMÁTICO (Bian Zheng): Explica la patomecanica.
+2. PRINCIPIO DE TRATAMIENTO.
+3. ACUPUNTURA: Selección de puntos (Principales y secundarios) con localización anatómica exacta y justificación de cada punto.
+4. AURICULOTERAPIA: Puntos recomendados.
+5. FITOTERAPIA CHINA: Fórmulas sugeridas para este patrón.
+6. DIETOTERAPIA: Alimentos a favorecer y evitar.
+7. ESTILO DE VIDA: Consejos específicos.`;
+
+        // 3. Mostrar el resultado
+        const output = document.getElementById('prompt-output');
+        output.value = prompt;
+        document.getElementById('ai-section').style.display = 'block';
+        
+        // Hacer scroll automático hacia abajo para ver el resultado en el iPad
+        document.getElementById('ai-section').scrollIntoView({behavior: "smooth"});
+    }
+
+    function copiarTexto() {
+        const copyText = document.getElementById("prompt-output");
+        
+        // Seleccionar texto (compatible con iOS)
+        copyText.select();
+        copyText.setSelectionRange(0, 99999); 
+        
+        navigator.clipboard.writeText(copyText.value).then(() => {
+            // Mostrar mensaje de éxito
+            const msg = document.getElementById('copy-msg');
+            msg.style.display = 'block';
+            setTimeout(() => { msg.style.display = 'none'; }, 3000);
+        });
+    }
+
+    function limpiarFormulario() {
+        if(confirm("¿Seguro que quieres borrar todos los datos del formulario?")) {
+            document.getElementById('consultaForm').reset();
+            document.getElementById('ai-section').style.display = 'none';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    }
+</script>
+
+</body>
+</html>
